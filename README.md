@@ -1,57 +1,108 @@
-# LSFG Mali
+# lsfg-mali
 
-Lossless Scaling Frame Generation (LSFG) working on MediaTek/Mali Android
-devices — a port of [lsfg-vk](https://github.com/PancakeTAS/lsfg-vk) /
-LSFG-Android to phones the upstream app had written off.
+The **lsfg-mali** project ports the most popular feature from the
+Windows-exclusive Lossless Scaling program — frame generation — to
+Android devices powered by MediaTek/Mali GPUs, the devices the existing
+ports had written off.
 
-On most Mali devices, upstream LSFG-Android degrades to a capture-only
-mirror with zero generated frames, because the engine's Vulkan core
-requires `VK_EXT_robustness2` and stock Mali drivers don't expose it.
-LSFG Mali solves this by carrying an open-source driver instead of
-fighting the stock one: it bundles **PanVK** (Mesa's Mali Vulkan driver,
-which implements robustness2 on Valhall) and a robustness2-free engine
-core that routes null-descriptor writes to a 1×1 fallback image.
+Where lsfg-vk does this on Linux through a Vulkan layer, lsfg-mali does
+it on Android through screen capture — and where stock Mali drivers hit
+a wall, it carries its own open-source Vulkan driver with it.
 
-## Status — v1.0
+## Why Mali needed its own port
 
-- **Device-confirmed working** on OnePlus 10R (Dimensity 8100-MAX /
-  MT6895, Mali-G610 MC6) — the first recorded LSFG frame generation on
-  this chip. MediaTek's own MFRC frame generation doesn't exist on the
-  8100 at all.
-- FP32 path: ~5.5 generated frames/s at full 2412×1080 (capture ~27/s;
-  input lag is inherent to the capture route).
-- FP16 fast path is expected ~1.5–2× faster but needs a Lossless.dll
-  ≥ 3.2.2.0 (the current build pairs with 3.2.1.0, which lacks the
-  precompiled FP16 SPIR-V set). Performance work, not a function blocker.
-- v1.0 is signed with a new dedicated release key — installing over any
-  v0.x debug build needs a one-time uninstall first.
+LSFG's engine core requires `VK_EXT_robustness2` (null descriptors).
+Stock Mali drivers don't expose it, so on most Mali devices the
+existing Android port degrades to a capture-only mirror with **zero
+generated frames**. MediaTek's own frame generation (MFRC) doesn't
+exist on chips like the Dimensity 8100 at all.
 
-## Install
+lsfg-mali's answer: don't fight the stock driver — bundle **PanVK**,
+Mesa's open-source Mali Vulkan driver, which implements robustness2 on
+Valhall GPUs, and pair it with a robustness2-free engine core that
+routes null-descriptor writes to a 1×1 fallback image.
 
-Download `LSFGMali-v1.0.apk` from the
-[Releases](../../releases) page and install it. You must supply your own
-`Lossless.dll` from a legitimately owned copy of Lossless Scaling
-(Steam) — it is **not** included in this project.
+## Features
 
-- Package: `com.syed.lsfgmali`
-- Version: 1.0 (versionCode 6), min Android 10 (API 29), arm64-v8a
-- APK SHA-256: `2a58369e1151c13b5b36b114d420d306a6e2b706e90b2d82167fddead1ae1162`
-- Signing certificate SHA-256: `c141c5ebeff393e0b788ae22cc6fba8ee0a2d64094ff7bb1a1e785d7b3c76dd9`
+With lsfg-mali, you can:
 
-Permissions: foreground service + media projection (screen capture),
-overlay window, notifications. No internet, no contacts, no location.
+- Use Lossless Scaling Frame Generation on a MediaTek/Mali Android
+  phone — **device-confirmed working** on the OnePlus 10R
+  (Dimensity 8100-MAX / MT6895, Mali-G610 MC6), the first recorded LSFG
+  frame generation on this chip.
+- Generate frames at full resolution: FP32 path produces ~5.5
+  generated frames/s at 2412×1080, with capture running at ~27/s
+  (input lag is inherent to the capture route).
+- Run on the bundled PanVK driver — no root, no custom ROM, no driver
+  flashing; the driver ships inside the APK.
+- Correct output orientation: the F4.10 rotation bug (swapchain
+  preTransform falsely declaring the surface's ROTATE_90 transform) is
+  root-caused and fixed.
+
+An FP16 fast path (expected ~1.5–2× faster) is in the works — it needs
+a Lossless.dll ≥ 3.2.2.0, which ships the precompiled FP16 SPIR-V set
+that 3.2.1.0 lacks.
+
+## Getting Started
+
+lsfg-mali is designed to work on arm64 Android devices with a Valhall
+Mali GPU. Android 10 (API 29) or newer is required.
+
+1. Download `LSFGMali-v1.0.apk` from the
+   [Releases](../../releases/latest) page and install it.
+   (v1.0 uses a new dedicated release key — uninstall any v0.x debug
+   build first, once.)
+2. Supply your own `Lossless.dll` from a legitimately owned copy of
+   [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/)
+   (Steam). The DLL is **not** included in this project and never will
+   be — lsfg-mali, like lsfg-vk, is only the port; the frame-generation
+   technology itself belongs to Lossless Scaling.
+3. Grant the screen-capture (media projection) and overlay permissions
+   when prompted, and start generating frames.
+
+Package: `com.syed.lsfgmali` · Version: 1.0 (versionCode 6) ·
+arm64-v8a
+
+APK SHA-256:
+`2a58369e1151c13b5b36b114d420d306a6e2b706e90b2d82167fddead1ae1162`
+Signing certificate SHA-256:
+`c141c5ebeff393e0b788ae22cc6fba8ee0a2d64094ff7bb1a1e785d7b3c76dd9`
+
+Permissions requested: foreground service + media projection (screen
+capture), overlay window, notifications. No internet, no contacts, no
+location.
 
 ## Documentation
 
-- [HOW_WE_MADE_IT.md](HOW_WE_MADE_IT.md) — the full story of the port.
+- [HOW_WE_MADE_IT.md](HOW_WE_MADE_IT.md) — the full story of the port,
+  written the night it shipped.
 - [PORTING_NOTES.md](PORTING_NOTES.md) — the complete technical record:
-  Phases 1–4, every flaw with file/line evidence, the F4.10 swapchain
-  preTransform rotation root cause and fix, DLL pairing verdict, PanVK
-  binary verification.
+  Phases 1–4 × 5 sub-phases, every flaw with file/line evidence, the
+  DLL pairing verdict, PanVK binary verification, and the F4.10
+  rotation root cause.
 
-## Credits
+## Credits & Inspiration
 
-- Upstream engine: lsfg-vk by PancakeTAS; Android port lineage:
-  LSFG-Android by FrankBarretta.
-- Vulkan driver: PanVK / Mesa (Panfrost project).
-- Port, packaging and notes: Buggy & Syed Muzammil.
+lsfg-mali exists because of the work it is inspired by, and says so
+plainly:
+
+- **[lsfg-vk](https://lsfg-vk.dev) by PancakeTAS** — the original port
+  of Lossless Scaling Frame Generation to Vulkan/Linux, and the direct
+  inspiration for this project: the engine, the approach, and the idea
+  that LSFG belongs on platforms Lossless Scaling itself doesn't ship
+  for. This repository's presentation is modelled on theirs, with
+  respect. lsfg-vk is licensed CC BY-NC-ND 4.0.
+- **[LSFG-Android](https://github.com/FrankBarretta/LSFG-Android) by
+  FrankBarretta** — the Android port lineage lsfg-mali builds on,
+  including the robustness2-free direction its session layer
+  prototyped.
+- **[PanVK / Panfrost](https://docs.mesa3d.org/drivers/panfrost.html)
+  (Mesa project)** — the open-source Mali Vulkan driver bundled in the
+  APK; its Valhall robustness2 support is what makes frame generation
+  on Mali possible at all.
+- **Lossless Scaling** by THS — the original Windows program whose
+  frame-generation technology all of these ports carry to new
+  platforms. Buy it on Steam; bring your own DLL.
+
+Port, PanVK packaging and documentation: **Buggy & Syed Muzammil**,
+2026. Built for personal use and research on our own devices.
