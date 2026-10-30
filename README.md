@@ -43,6 +43,13 @@ An FP16 fast path (expected ~1.5–2× faster) is in the works — it needs
 a Lossless.dll ≥ 3.2.2.0, which ships the precompiled FP16 SPIR-V set
 that 3.2.1.0 lacks.
 
+> **⚠️ FP16 requirement:** the FP16 fast path only works with a
+> `Lossless.dll` taken from an up-to-date **Lossless Scaling install on
+> Steam (DLL version 3.2.2.0 or newer)**. Older DLLs (e.g. 3.2.1.0) do
+> not contain the FP16 shader set, so lsfg-mali falls back to the FP32
+> path — fully working, just slower. To unlock FP16: update Lossless
+> Scaling in Steam, then re-copy the DLL from the updated install.
+
 ## Getting Started
 
 lsfg-mali is designed to work on arm64 Android devices with a Valhall
@@ -56,7 +63,9 @@ Mali GPU. Android 10 (API 29) or newer is required.
    [Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/)
    (Steam). The DLL is **not** included in this project and never will
    be — lsfg-mali, like lsfg-vk, is only the port; the frame-generation
-   technology itself belongs to Lossless Scaling.
+   technology itself belongs to Lossless Scaling. Any recent DLL runs
+   the FP32 path; for the **FP16 fast path you need DLL 3.2.2.0 or
+   newer** from an updated Steam install (see the FP16 note above).
 3. Grant the screen-capture (media projection) and overlay permissions
    when prompted, and start generating frames.
 
